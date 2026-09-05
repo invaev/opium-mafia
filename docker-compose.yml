@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: opium_mafia
+    ports:
+      - '5433:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6380:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - '3001:3000'
+    environment:
+      PORT: '3000'
+      HOST: '0.0.0.0'
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/opium_mafia
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: local-dev-secret-change-me
+      TELEGRAM_BOT_TOKEN: ''
+      TELEGRAM_BOT_SECRET: ''
+      IPAD_API_KEY: dev-ipad-key
+      GM_PASSPHRASE: dev-gm-passphrase
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  client:
+    build:
+      context: .
+      dockerfile: client-app/Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      VITE_API_URL: http://localhost:3001
+      VITE_WS_URL: ws://localhost:3001
+      VITE_BOT_TOKEN: ''
+      PLAYWRIGHT_TEST: '1'
+    depends_on:
+      - server
+
+  gm-app:
+    build:
+      context: .
+      dockerfile: gm-app/Dockerfile
+    ports:
+      - '7777:7777'
+    environment:
+      VITE_API_URL: http://localhost:3001
+      VITE_IPAD_API_KEY: dev-ipad-key
+    depends_on:
+      - server
+
+volumes:
+  pgdata:

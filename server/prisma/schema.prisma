@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  telegramId   BigInt   @unique @map("telegram_id")
+  telegramUsername  String?  @map("telegram_username") @db.VarChar(255)
+  telegramFirstName String?  @map("telegram_first_name") @db.VarChar(255)
+  telegramLastName  String?  @map("telegram_last_name") @db.VarChar(255)
+  telegramPhotoUrl  String?  @map("telegram_photo_url")
+  telegramLanguage  String?  @map("telegram_language") @db.VarChar(10)
+  telegramIsPremium Boolean? @map("telegram_is_premium")
+  nickname     String?  @db.VarChar(255)
+  displayName  String   @map("display_name") @db.VarChar(255)
+  avatarUrl    String?  @map("avatar_url")
+  avatarEmoji      String? @map("avatar_emoji") @db.VarChar(10)
+  avatarColorIndex Int?    @map("avatar_color_index")
+  instagramUsername String? @map("instagram_username") @db.VarChar(30)
+  dateOfBirth      String? @map("date_of_birth") @db.VarChar(10)
+  gender           String? @db.VarChar(10)
+  bio              String? @db.VarChar(200)
+  registered   Boolean  @default(false)
+  banned       Boolean  @default(false)
+  banReason    String?  @map("ban_reason") @db.VarChar(500)
+  bannedAt     DateTime? @map("banned_at") @db.Timestamptz()
+  bannedBy     Int?     @map("banned_by")
+  totalRating  Int      @default(0) @map("total_rating")
+  gamesPlayed  Int      @default(0) @map("games_played")
+  gamesWon     Int      @default(0) @map("games_won")
+  totalFouls   Int      @default(0) @map("total_fouls")
+  lastSeenAt   DateTime? @map("last_seen_at") @db.Timestamptz()
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  hostedGames   Game[]        @relation("GameHost")
+  gamePlayers   GamePlayer[]
+  gameRatings   GameRating[]
+  bansReceived  GameBan[]     @relation("BannedUser")
+  bansCreated   GameBan[]     @relation("BanCreator")
+  @@map("users")
+}
+
+model Game {
+  id          Int       @id @default(autoincrement())
+  hostUserId  Int?      @map("host_user_id")
+  name        String?   @db.VarChar(255)
+  photoData   String?   @map("photo_data") @db.Text
+  playerCount Int       @map("player_count")
+  status      String    @db.VarChar(20)
+  winner      String?   @db.VarChar(20)
+  gameLog     Json?     @map("game_log")
+  startedAt   DateTime? @map("started_at") @db.Timestamptz()
+  finishedAt  DateTime? @map("finished_at") @db.Timestamptz()
+
+  clonedFromId Int?      @map("cloned_from_id")
+
+  host       User?        @relation("GameHost", fields: [hostUserId], references: [id])
+  clonedFrom Game?        @relation("GameClone", fields: [clonedFromId], references: [id])
+
+  @@index([status])
+  clones     Game[]       @relation("GameClone")
+  players    GamePlayer[]
+  ratings    GameRating[]
+  bans       GameBan[]
+  gameState  GameState?
+
+  @@map("games")
+}
+
+model GamePlayer {
+  id          Int     @id @default(autoincrement())
+  gameId      Int     @map("game_id")
+  userId      Int?    @map("user_id")
+  seatNumber  Int     @map("seat_number")
+  displayName String  @map("display_name") @db.VarChar(255)
+  role        String  @default("unassigned") @db.VarChar(30)
+  guests      Int     @default(0)
+  isAlive     Boolean @default(true) @map("is_alive")
+  fouls       Int     @default(0)
+  deathReason String? @map("death_reason") @db.VarChar(30)
+  deathDay    Int?    @map("death_day")
+
+  game Game  @relation(fields: [gameId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
+
+  @@unique([gameId, userId])
+  @@map("game_players")
+}
+
+model GameRating {
+  id            Int      @id @default(autoincrement())
+  gameId        Int      @map("game_id")
+  userId        Int      @map("user_id")
+  role          String   @db.VarChar(30)
+  basePoints    Int      @map("base_points")
+  bonusPoints   Int      @map("bonus_points")
+  penaltyPoints Int      @map("penalty_points")
+  totalPoints   Int      @map("total_points")
+  breakdown     Json
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  game Game @relation(fields: [gameId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("game_ratings")
+}
+
+model GameBan {
+  id        Int      @id @default(autoincrement())
+  gameId    Int      @map("game_id")
+  userId    Int      @map("user_id")
+  bannedBy  Int      @map("banned_by")
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  game         Game @relation(fields: [gameId], references: [id])
+  user         User @relation("BannedUser", fields: [userId], references: [id])
+  bannedByUser User @relation("BanCreator", fields: [bannedBy], references: [id])
+
+  @@unique([gameId, userId])
+  @@map("game_bans")
+}
+
+model GameState {
+  id        Int      @id @default(autoincrement())
+  gameId    Int      @unique @map("game_id")
+  stateJson Json     @map("state_json")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@map("game_states")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String   @db.VarChar(50)
+  userId    Int?     @map("user_id")
+  targetId  Int?     @map("target_id")
+  gameId    Int?     @map("game_id")
+  ip        String?  @db.VarChar(45)
+  source    String?  @db.VarChar(20)
+  meta      Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([action])
+  @@index([userId])
+  @@index([gameId])
+  @@index([createdAt])
+  @@index([source])
+  @@map("audit_logs")
+}

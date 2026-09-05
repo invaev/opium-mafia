@@ -1,0 +1,6 @@
+/*
+  X-Frame-Options: ALLOW-FROM https://web.telegram.org
+  Content-Security-Policy: frame-ancestors https://web.telegram.org https://webk.telegram.org https://webz.telegram.org
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

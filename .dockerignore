@@ -1,0 +1,15 @@
+node_modules
+*/node_modules
+**/node_modules
+.git
+*.md
+**/.env
+**/.env.*
+server/dist
+client-app/dist
+gm-app/dist
+.github
+docs
+files
+e2e
+**/.DS_Store

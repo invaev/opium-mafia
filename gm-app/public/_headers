@@ -1,0 +1,6 @@
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://opium-server-production.up.railway.app wss://opium-server-production.up.railway.app; img-src 'self' data: blob: https://t.me https://*.telesco.pe; font-src 'self'; frame-ancestors 'none'
